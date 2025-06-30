@@ -1,0 +1,73 @@
+name: Build and Release Camera App Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Select Branch'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - development
+        # add other branches here if necessary
+
+permissions:
+  contents: write  # Required for creating releases
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    container:
+      image: debian:bookworm
+      options: --privileged
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y git gzip make binutils build-essential
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+          fetch-depth: 0  # fetch full history including tags
+
+      - name: Trust workspace directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Get current tag
+        shell: bash
+        id: vars
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          echo "release=$tag" >> "$GITHUB_OUTPUT"
+          if [[ "${{ github.event_name }}" = "workflow_dispatch" && "${{ github.event.inputs.branch }}" == "development" ]]; then
+            echo "tag=${{ github.event.inputs.branch }}-$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Make toolchain sub-directories
+        run: for i in .config-* ; do mkdir build-${i##.config-}; done
+
+      - name: Build toolchains
+        run: |
+          for i in .config-*
+            pushd $i
+            make
+            make sdk
+            popd
+          done
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.release }}
+          files: build-*/output/images/*.tar.gz
+          draft: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
