@@ -1,4 +1,4 @@
-name: Build and Release Camera App Image
+name: Build and Release Cross Compilation Toolchain
 
 on:
   workflow_dispatch:
@@ -51,23 +51,30 @@ jobs:
             echo "tag=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Make toolchain sub-directories
-        run: for i in .config-* ; do mkdir build-${i##.config-}; done
+      - name: Clone buildroot
+        run: git clone --depth 1 https://github.com/buildroot/buildroot.git
+
+      - name: Make toolchain common build directory
+        run: mkdir output
+        #for i in .config-* ; do mkdir build-${i##.config-}; done
 
       - name: Build toolchains
         run: |
-          for i in .config-*
-            pushd $i
+          cd buildroot
+          for i in ../.config-*
+          do
+            cp $i .config
             make
             make sdk
-            popd
+            mv output/images/*.tar.gz ../output/
           done
+          cd ..
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.release }}
-          files: build-*/output/images/*.tar.gz
+          files: output/*.tar.gz
           draft: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
