@@ -28,7 +28,7 @@ jobs:
       - name: Install prerequisites
         run: |
           apt-get update
-          apt-get install -y git gzip make binutils build-essential
+          apt-get install -y git wget bc which sed make binutils build-essential diffutils gcc g++ bash patch gzip bzip2 perl tar cpio unzip rsync file
 
       - name: Checkout
         uses: actions/checkout@v4
