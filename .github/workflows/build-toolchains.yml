@@ -65,9 +65,10 @@ jobs:
           for i in ../.config-*
           do
             cp $i .config
+            make clean
             make
             make sdk
-            mv output/images/*.tar.gz ../output/
+            mv output/images/*.tar.gz ../output/ || true
           done
           cd ..
 
