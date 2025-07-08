@@ -5,7 +5,7 @@ toolchains and images for openwrt devices. These are meant to create cross-compi
 
 ## SXT sq 5ac - RBSXT-sqG-5acD
 
-- arch: armv7h
+- arch: arm_cortex-a7_neon-vfpv4
 - machine: arm-buildroot-linux-musleabihf
 - toolchain: arm-buildroot-linux-musleabihf_sdk-buildroot.tar.gz
 
